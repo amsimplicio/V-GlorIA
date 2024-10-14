@@ -645,14 +645,19 @@ class Fromage(nn.Module, PyTorchModelHubMixin):
 def load_fromage(model_dir: str) -> Fromage:
   model_args_path = os.path.join(model_dir, 'model_args.json')
   model_ckpt_path = os.path.join(model_dir, 'pretrained_ckpt.pth.tar')
-  embs_paths = [s for s in glob.glob(os.path.join(model_dir, 'cc3m_embeddings*.pkl'))]
+  try:
+    embs_paths = [s for s in glob.glob(os.path.join(model_dir, 'cc3m_embeddings*.pkl'))]
+    is_cc3m = True
+  except:
+    print("No cc3m_embeddings*.pkl files found in model_dir.")
+    is_cc3m = False
 
   if not os.path.exists(model_args_path):
     raise ValueError(f'model_args.json does not exist in {model_dir}.')
   if not os.path.exists(model_ckpt_path):
     raise ValueError(f'pretrained_ckpt.pth.tar does not exist in {model_dir}.')
-  if len(embs_paths) == 0:
-    raise ValueError(f'cc3m_embeddings_*.pkl files do not exist in {model_dir}.')
+  #if len(embs_paths) == 0:
+  #  raise ValueError(f'cc3m_embeddings_*.pkl files do not exist in {model_dir}.')
 
   # Load embeddings.
   # Construct embedding matrix for nearest neighbor lookup.
@@ -660,19 +665,20 @@ def load_fromage(model_dir: str) -> Fromage:
   emb_matrix = []
 
   # These were precomputed for all CC3M images with `model.get_visual_embs(image, mode='retrieval')`.
-  for p in embs_paths:
-    with open(p, 'rb') as wf:
-        train_embs_data = pkl.load(wf)
-        path_array.extend(train_embs_data['paths'])
-        emb_matrix.append(train_embs_data['embeddings'])
-  try:
-    emb_matrix = np.concatenate(emb_matrix, axis=0)
-  except:
-    emb_matrix = [[torch.Tensor.numpy(torch.tensor(emb).float()) for emb in emb_matrix[0]]]
-    emb_matrix = np.concatenate(emb_matrix, axis=0)
-    
-  # Number of paths should be equal to number of embeddings.
-  assert len(path_array) == emb_matrix.shape[0], (len(path_array), emb_matrix.shape[0])
+  if is_cc3m:
+    for p in embs_paths:
+      with open(p, 'rb') as wf:
+          train_embs_data = pkl.load(wf)
+          path_array.extend(train_embs_data['paths'])
+          emb_matrix.append(train_embs_data['embeddings'])
+    try:
+      emb_matrix = np.concatenate(emb_matrix, axis=0)
+    except:
+      emb_matrix = [[torch.Tensor.numpy(torch.tensor(emb).float()) for emb in emb_matrix[0]]]
+      emb_matrix = np.concatenate(emb_matrix, axis=0)
+      
+    # Number of paths should be equal to number of embeddings.
+    assert len(path_array) == emb_matrix.shape[0], (len(path_array), emb_matrix.shape[0])
 
   with open(model_args_path, 'r') as f:
       model_kwargs = json.load(f)
@@ -704,12 +710,12 @@ def load_fromage(model_dir: str) -> Fromage:
   model.load_state_dict(checkpoint['state_dict'], strict=False)
   with torch.no_grad():
       model.model.input_embeddings.weight[model.model.retrieval_token_idx, :].copy_(checkpoint['state_dict']['ret_input_embeddings.weight'].squeeze().cpu().detach())
-
-  logit_scale = model.model.logit_scale.exp()
-  emb_matrix = torch.tensor(emb_matrix, dtype=logit_scale.dtype).to(logit_scale.device)
-  emb_matrix = emb_matrix / emb_matrix.norm(dim=1, keepdim=True)
-  emb_matrix = logit_scale * emb_matrix
-  model.emb_matrix = emb_matrix
+  if is_cc3m:
+    logit_scale = model.model.logit_scale.exp()
+    emb_matrix = torch.tensor(emb_matrix, dtype=logit_scale.dtype).to(logit_scale.device)
+    emb_matrix = emb_matrix / emb_matrix.norm(dim=1, keepdim=True)
+    emb_matrix = logit_scale * emb_matrix
+    model.emb_matrix = emb_matrix
 
   return model
 
