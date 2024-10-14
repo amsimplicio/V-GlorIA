@@ -645,19 +645,21 @@ class Fromage(nn.Module, PyTorchModelHubMixin):
 def load_fromage(model_dir: str) -> Fromage:
   model_args_path = os.path.join(model_dir, 'model_args.json')
   model_ckpt_path = os.path.join(model_dir, 'pretrained_ckpt.pth.tar')
-  try:
-    embs_paths = [s for s in glob.glob(os.path.join(model_dir, 'cc3m_embeddings*.pkl'))]
-    is_cc3m = True
-  except:
-    print("No cc3m_embeddings*.pkl files found in model_dir.")
-    is_cc3m = False
+
+  embs_paths = [s for s in glob.glob(os.path.join(model_dir, 'cc3m_embeddings*.pkl'))]
+    
+    
+    
 
   if not os.path.exists(model_args_path):
     raise ValueError(f'model_args.json does not exist in {model_dir}.')
   if not os.path.exists(model_ckpt_path):
     raise ValueError(f'pretrained_ckpt.pth.tar does not exist in {model_dir}.')
-  #if len(embs_paths) == 0:
-  #  raise ValueError(f'cc3m_embeddings_*.pkl files do not exist in {model_dir}.')
+  if len(embs_paths) == 0:
+    print("No cc3m_embeddings*.pkl files found in model_dir.")
+    is_cc3m = False
+  else:
+    is_cc3m = True
 
   # Load embeddings.
   # Construct embedding matrix for nearest neighbor lookup.
