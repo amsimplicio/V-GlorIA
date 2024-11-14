@@ -1,8 +1,11 @@
-# Instructions
-## Pretrained Checkpoints 
+# V-GlórIA
+<img src="vgloria.png" width="200" height="200">
+
+
+# Pretrained Checkpoints 
 V-GlórIA model weights are [here](https://drive.google.com/file/d/1CFDfaDTF_8kj2hFzCTEzKgRy_MB0ZNAC/view?usp=drive_link), they should be saved in ```VGlorIA_model```.
 
-## Datasets
+# Datasets
 We share the datasets we translated:
 - [CC3M PT-BR](https://huggingface.co/datasets/NOVA-vision-language/CC3M_PT-BR) (translated with MADLAD-400)
 - [MSCOCO PT-BR](https://huggingface.co/datasets/NOVA-vision-language/MSCOCO_PT-BR) (translated with MADLAD-400)
